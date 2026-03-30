@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knoose AR</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    /* Loading overlay */
+    #loading {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    #loading p {
+      font-size: 18px;
+      margin-top: 20px;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading screen -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Point camera at the package</p>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-assets>
+      <a-asset-item id="knoose-model" src="./model.glb"></a-asset-item>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-gltf-model
+        src="#knoose-model"
+        animation-mixer="loop: once; clampWhenFinished: true;"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="1 1 1"
+      ></a-gltf-model>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // Hide loading screen once target is found
+    const sceneEl = document.querySelector('a-scene');
+
+    sceneEl.addEventListener('renderstart', () => {
+      // Hide loading once AR is ready
+      document.getElementById('loading').classList.add('hidden');
+    });
+
+    // Optional: restart animation each time target is found
+    const target = document.querySelector('[mindar-image-target]');
+    target.addEventListener('targetFound', () => {
+      const model = document.querySelector('a-gltf-model');
+      const mixer = model.components['animation-mixer'];
+      if (mixer && mixer.mixer) {
+        mixer.mixer.stopAllAction();
+        // Re-trigger all clip actions
+        const clips = mixer.mixer._actions;
+        if (clips) {
+          clips.forEach(action => {
+            action.reset();
+            action.play();
+          });
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
